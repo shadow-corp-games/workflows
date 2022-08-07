@@ -1,0 +1,102 @@
+name: Publish Package
+
+on:
+  workflow_call:
+    secrets:
+      PRIVATE_CLONE:
+        required: true
+      J_FROG:
+        required: true
+      
+
+jobs:
+  Publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out git
+        uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://shadowcorpgaes.jfrog.io/artifactory/api/npm/frameworks-npm/
+      - name: Config package
+        run: npm config ls
+
+      - name: Find Package Json
+        id: package-json
+        run: |
+          JSON_PATHS=$(find ./ -type f -name 'package.json')
+          echo "All package.json files found: $JSON_PATHS"
+          PAKAGE_JSON=`echo "${JSON_PATHS}" | head -1`
+          echo "First Package: $PAKAGE_JSON"
+          PACKAGE_DIRECTORY="$(dirname "${PAKAGE_JSON}")"
+          echo "Package Directory: $PACKAGE_DIRECTORY"
+          echo "::set-output name=PACKAGE_DIRECTORY::$PACKAGE_DIRECTORY"
+          
+      - name: Publish package
+        run: npm publish --registry https://shadowcorpgaes.jfrog.io/artifactory/api/npm/frameworks-npm/
+        working-directory: ${{ steps.package-json.outputs.PACKAGE_DIRECTORY }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.J_FROG}}
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+ 
+  Document:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repo
+        uses: actions/checkout@v3
+        with:
+          path: ./package
+          
+      - name: Checkout Docs Repo
+        uses: actions/checkout@v3
+        with:
+          repository: shadow-corp-games/shadow-corp-games.github.io
+          path: ./docs
+          token: ${{ secrets.PRIVATE_CLONE }}
+
+      - name: Checkout Doxygen Awesome Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jothepro/doxygen-awesome-css
+          path: ./doxygen-awesome-css
+      
+      - name: Get Repo Name
+        id: string
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ github.event.repository.name }}
+
+      - name: Set Project Name
+        uses: jacobtomlinson/gha-find-replace@v2
+        with:
+          find: "[PROJECT]"
+          replace: ${{ steps.string.outputs.capitalized }}
+          regex: false
+          include: "docs/*"
+
+      - name: Build
+        uses: mattnotmitt/doxygen-action@v1.9.4
+        with:
+          doxyfile-path: ./docs/Doxyfile
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./out/html
+          full_commit_message: "Documetation for -> ${{ github.event.head_commit.message }}"
