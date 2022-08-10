@@ -32,8 +32,16 @@ jobs:
           echo "First Package: $PAKAGE_JSON"
           PACKAGE_DIRECTORY="$(dirname "${PAKAGE_JSON}")"
           echo "Package Directory: $PACKAGE_DIRECTORY"
+          echo "::set-output name=PACKAGE_JSON::$PAKAGE_JSON"
           echo "::set-output name=PACKAGE_DIRECTORY::$PACKAGE_DIRECTORY"
-          
+      
+      - name: Get Version
+        id: version
+        uses: notiz-dev/github-action-json-property@release
+        with: 
+            path: ${{ steps.package-json.outputs.PACKAGE_JSON }}
+            prop_path: 'version'
+
       - name: Publish package
         run: npm publish --registry https://shadowcorpgaes.jfrog.io/artifactory/api/npm/frameworks-npm/
         working-directory: ${{ steps.package-json.outputs.PACKAGE_DIRECTORY }}
@@ -44,6 +52,7 @@ jobs:
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.0
         with:
+          new_version: ${{steps.version.outputs.prop}}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Create a GitHub release
