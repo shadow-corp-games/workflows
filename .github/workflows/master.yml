@@ -48,19 +48,20 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.J_FROG}}
 
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.0
-        with:
-          new_version: ${{steps.version.outputs.prop}}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag Release
+        id: tag-release
+        run: |
+          tag="v${{steps.version.outputs.prop}}"
+          git tag "$tag"
+          echo "::set-output name=release_tag::$tag"
+
           
       - name: Create a GitHub release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.tag_version.outputs.new_tag }}
-          name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.tag_version.outputs.changelog }}
+          tag: ${{ steps.tag-release.outputs.tag }}
+          name: Release ${{steps.version.outputs.prop}}
+          body: ${{ github.event.head_commit.message }}
  
   Document:
     runs-on: ubuntu-latest
