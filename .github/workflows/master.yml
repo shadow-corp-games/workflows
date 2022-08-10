@@ -59,7 +59,7 @@ jobs:
       - name: Create a GitHub release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.tag-release.outputs.tag }}
+          tag: ${{ steps.tag-release.outputs.release_tag }}
           name: Release ${{steps.version.outputs.prop}}
           body: ${{ github.event.head_commit.message }}
  
