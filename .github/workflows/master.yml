@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
-          registry-url: https://npm.pkg.github.com
+          registry-url: https://scg.jfrog.io/artifactory/api/npm/unity-npm/
       - name: Config package
         run: npm config ls
 
@@ -43,7 +43,7 @@ jobs:
             prop_path: 'version'
 
       - name: Publish package
-        run: npm publish --registry https://npm.pkg.github.com
+        run: npm publish --registry https://scg.jfrog.io/artifactory/api/npm/unity-npm/
         working-directory: ${{ steps.package-json.outputs.PACKAGE_DIRECTORY }}
         env:
           NODE_AUTH_TOKEN: ${{secrets.J_FROG}}
